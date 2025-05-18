@@ -2,53 +2,18 @@ import os
 import random
 import requests
 import threading
-from typing import List
-from concurrent.futures import ThreadPoolExecutor
 import logging
-import json
+from typing import List
+from tools import *
+from concurrent.futures import ThreadPoolExecutor
 
-def save_text(data: str,path: str) -> None:
-    try:
-        with open(path, 'w') as file:
-            file.write(data)
-            logging.info(f"Save file successfully at {path} !")
-    except Exception as e:
-        print(e)
-
-def read_text(path: str)-> str | None:
-    try:
-        with open(path, 'r') as file:
-            content = file.read()
-            logging.info(f"Read file {path}")
-            return content
-    except Exception as e:
-        logging.error(f"Failed to read file path {path}: \n\n{e}\n\n")
-        return None
-
-def save_json(data:str, path:str) ->  None:
-    try:
-        with open(path, 'w') as file:
-            json.dump(data, file)
-            logging.info(f"Saved file {path} successfully !")
-
-    except Exception as e:
-        logging.error(f"Failed to save file path {path}: \n\n{e}\n\n")
-        raise e
-def read_json(path: str) -> dict | None:
-    try:
-        with open(path, 'r') as file:
-            data = json.load(file)
-            return data
-    except Exception as e:
-        logging.error(f"Failed to read file path {path}: \n\n{e}\n\n")
-        raise e
 
 def sample_ids()-> None:
     SAMPLE_SIZE = 50000
     PATH = "/home/acer/Downloads/PMC040XXXXX_json_ascii"
     pubmed_ids = [item.replace(".xml", "") for item in os.listdir(PATH)]
     sample = random.choices(pubmed_ids, k=SAMPLE_SIZE)
-    save_text("|".join(sample), "/home/acer/projects/graph_ingestion/data/pubmed_ids_sample.txt")
+    save_text("|".join(sample), "/data/pubmed_ids_sample.txt")
 
 
 def fetch_single_id(id, raw_data, lock):
@@ -60,7 +25,7 @@ def fetch_single_id(id, raw_data, lock):
         # Use a lock when writing to the shared dictionary
         with lock:
             raw_data[id] = body_response[0]
-            #logging.info(f"Got raw data for ID: {id}")
+            logging.info(f"Got raw data for ID: {id}")
 
         return True
     except Exception as e:
@@ -82,7 +47,6 @@ def get_raw_data_threaded(ids: List[str], max_workers=10, continue_process=False
         ids_to_process = list(all_ids_set.difference(ids_processed))
 
     total_ids = len(ids_to_process)
-    print(total_ids)
     successful_fetches = 0
 
     try:
@@ -108,16 +72,11 @@ def get_raw_data_threaded(ids: List[str], max_workers=10, continue_process=False
             save_json(raw_data, RAW_DATA_PATH)
         return raw_data
 
-def setup_logs()->None:
-    format = (
-        f"[INGESTION-PUBMED-DATA] - [%(asctime)s] - [%(levelname)s] - %(message)s"
-    )
-    logging.basicConfig(format=format, level=logging.INFO)
+
 
 if __name__=="__main__":
     setup_logs()
     #sample  = sample_ids()
     pubmed_ids = read_text("/home/acer/projects/graph_ingestion/data/pubmed_ids_sample.txt").split("|")
-    get_raw_data_threaded(pubmed_ids, max_workers=20, continue_process=True)
-
+    get_raw_data_threaded(pubmed_ids, max_workers=20)
 
