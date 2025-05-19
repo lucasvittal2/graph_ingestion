@@ -39,36 +39,41 @@ def fetch_single_id(id, raw_data, lock):
         logging.error(f"Failed to get raw data for ID {id}: {e}")
         return False
 
-
-def get_raw_data_threaded(ids: List[str], max_workers:int, num_partitions: int, raw_folder:str):
-
-
-    today = date.today()
-    formatted_date = today.strftime("%d-%m-%Y")
-    lock = threading.Lock()
-    path_to_save = f"{raw_folder}/{formatted_date}"
-    partitions = get_data_partitions(pubmed_ids, num_partitions)
-    checkpoint_file_path = f"{path_to_save}/checkpoint.json"
-
+def create_save_folder_if_not_exists(path_to_save: str) -> None:
     if not os.path.exists(path_to_save):
         os.makedirs(path_to_save)
+        logging.info(f"Created Save folder '{path_to_save}'.")
 
-    #implement incremental extractions
+def get_checkpoint_if_exists(checkpoint_file_path: str, partitions: List[List[str]]) -> List[List[str]]:
+
     if os.path.isfile(checkpoint_file_path):
         partition_checkpoint = read_json(checkpoint_file_path)["partition_index"]
-        partitions = partitions[partition_checkpoint:]
+        checkpoint_partitions = partitions[partition_checkpoint:]
+    else:
+        checkpoint_partitions = partitions
+
+    return checkpoint_partitions
+def get_raw_data_threaded(ids: List[str], max_workers:int, num_partitions: int, raw_folder:str) -> None:
 
     total_ids = len(ids)
+    today = date.today()
+    lock = threading.Lock()
     successful_fetches = 0
+    formatted_date = today.strftime("%d-%m-%Y")
+    path_to_save = f"{raw_folder}/{formatted_date}"
+
+    create_save_folder_if_not_exists(path_to_save)
+    partitions = get_data_partitions(pubmed_ids, num_partitions)
+    checkpoint_file_path = f"{path_to_save}/checkpoint.json"
+    partitions = get_checkpoint_if_exists(checkpoint_file_path, partitions)
     logging.info(f"Total records to process: {total_ids}")
     logging.info(f"Partitions to process: {num_partitions}")
+
 
     for i, partition in enumerate(partitions):
 
         raw_data = {}
         raw_data_path = f"{path_to_save}/pubmed_articles_metadata_partition{i + 1}.json"
-
-
 
         try:
             # Use a ThreadPoolExecutor to manage the thread pool
@@ -85,8 +90,6 @@ def get_raw_data_threaded(ids: List[str], max_workers:int, num_partitions: int, 
                 f"Extraction of raw data completed. Successfully fetched {successful_fetches}/{total_ids} records.")
             save_json(raw_data, raw_data_path)
 
-
-
         except Exception as e:
             logging.error(f"Failed in thread execution: \n\n{e}\n\n")
             # Save whatever data was collected before the error
@@ -98,18 +101,13 @@ def get_raw_data_threaded(ids: List[str], max_workers:int, num_partitions: int, 
             raise e
 
 
-
-    return None
-
-
 if __name__=="__main__":
     SAMPLE_SIZE = 5000
     PARTITIONS= 100
     RAW_FOLDER = "/home/acer/projects/graph_ingestion/data/raw"
 
     setup_logs()
-    sample  = sample_ids(SAMPLE_SIZE)
+    #sample  = sample_ids(SAMPLE_SIZE)
     pubmed_ids = read_text("/home/acer/projects/graph_ingestion/data/pubmed_ids_sample.txt").split("|")
-
     get_raw_data_threaded(pubmed_ids, max_workers=20, num_partitions=PARTITIONS, raw_folder=RAW_FOLDER)
 
