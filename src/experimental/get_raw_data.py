@@ -2,12 +2,13 @@ import os
 import random
 import requests
 import threading
+import xmltodict
 import logging
 from typing import List
 from tools import *
 from concurrent.futures import ThreadPoolExecutor
 from datetime import date
-
+import time
 
 def sample_ids(sample_size: int)-> None:
 
@@ -25,16 +26,26 @@ def get_data_partitions(data: List[str], partition_size: int) -> List[List[str]]
 
 def fetch_single_id(id, raw_data, lock):
     try:
-        url = f"https://www.ncbi.nlm.nih.gov/research/bionlp/RESTful/pmcoa.cgi/BioC_json/{id}/unicode"
-        response = requests.get(url)
-        body_response = response.json()
+        url = f"https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi"
+        params = {
+            "db": "pubmed",
+            "id": id,
+            "retmode": "xml"
+        }
 
-        # Use a lock when writing to the shared dictionary
+        response = requests.get(url, params=params)
+        response.raise_for_status()  # Raises HTTPError for bad responses
+
+        if not response.content.strip().startswith(b"<"):
+            logging.error(f"Response for ID {id} is not valid XML:\n{response.text}")
+            return False
+
+        body_response = xmltodict.parse(response.content)
+
         with lock:
-            raw_data[id] = body_response[0]
-            #logging.info(f"Got raw data for ID: {id}")
-
+            raw_data[id] = body_response
         return True
+
     except Exception as e:
         logging.error(f"Failed to get raw data for ID {id}: {e}")
         return False
@@ -86,6 +97,7 @@ def get_raw_data_threaded(ids: List[str], max_workers:int, num_partitions: int, 
                     if future.result():
                         successful_fetches += 1
 
+
             logging.info(
                 f"Extraction of raw data completed. Successfully fetched {successful_fetches}/{total_ids} records.")
             save_json(raw_data, raw_data_path)
@@ -109,4 +121,4 @@ if __name__=="__main__":
     setup_logs()
     sample  = sample_ids(SAMPLE_SIZE)
     pubmed_ids = read_text("/home/acer/projects/graph_ingestion/data/pubmed_ids_sample.txt").split("|")
-    get_raw_data_threaded(pubmed_ids, max_workers=20, num_partitions=PARTITIONS, raw_folder=RAW_FOLDER)
+    get_raw_data_threaded(pubmed_ids, max_workers=1, num_partitions=PARTITIONS, raw_folder=RAW_FOLDER)
