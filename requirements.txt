@@ -4,3 +4,4 @@ pandas==2.2.3
 pyarrow==20.0.0
 fastparquet==2024.11.0
 setuptools==80.8.0
+xmltodict==0.14.2
