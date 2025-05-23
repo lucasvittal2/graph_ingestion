@@ -8,7 +8,7 @@ def save_text(data: str, path: str) -> None:
             file.write(data)
             logging.info(f"Save file successfully at {path} !")
     except Exception as e:
-        print(e)
+        logging.error(e)
 
 
 def read_text(path: str) -> str | None:
