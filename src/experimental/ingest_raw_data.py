@@ -7,7 +7,6 @@ from tools import read_json, setup_logs
 from pyspark.sql.types import StructType, StructField, StringType, ArrayType
 
 
-
 def get_title(metadata: dict) -> str | None:
 
     if metadata["PubmedArticleSet"] is None:
@@ -34,78 +33,52 @@ def get_abstract(metadata: dict) -> str | None:
     abstract = article_metadata["Abstract"]["AbstractText"] if "Abstract" in article_metadata.keys() else None
     return abstract
 
-def get_mesh_data(metadata: dict)-> dict | None:
 
-    if metadata["PubmedArticleSet"] is None:
-        mesh_data = {
-            "meshMajorIds": None,
-            "meshMajorTerms": None,
-            "meshMinorIds": None,
-            "meshMinorTerms": None
-        }
-        return mesh_data
+def get_mesh_data(metadata: dict) -> dict:
 
-    med_citation_metadata = metadata["PubmedArticleSet"]["PubmedArticle"]["MedlineCitation"]
+    empty_mesh_data = {
+        "meshMajorIds": None,
+        "meshMajorTerms": None,
+        "meshMinorIds": None,
+        "meshMinorTerms": None
+    }
 
-    if "MeshHeadingList" not in med_citation_metadata:
-        mesh_data = {
-            "meshMajorIds": None,
-            "meshMajorTerms": None,
-            "meshMinorIds": None,
-            "meshMinorTerms": None
-        }
-        return mesh_data
+    if not metadata.get("PubmedArticleSet"):
+        return empty_mesh_data
 
-    mesh_headings_metadata = med_citation_metadata["MeshHeadingList"]["MeshHeading"]
+    try:
+        med_citation = metadata["PubmedArticleSet"]["PubmedArticle"]["MedlineCitation"]
+    except KeyError:
+        return empty_mesh_data
 
-    if "MeshHeadingList" in med_citation_metadata.keys():
-        meshMajorIds = []
-        meshMajorTerms = []
-        meshMinorIds = []
-        meshMinorTerms = []
+    if "MeshHeadingList" not in med_citation:
+        return empty_mesh_data
 
-        if type(mesh_headings_metadata) is dict:
-            term_metadata = mesh_headings_metadata["DescriptorName"]
-            if term_metadata["@MajorTopicYN"] == "Y":
-                meshMajorIds.append(term_metadata["@UI"])
-                meshMajorTerms.append(term_metadata["#text"])
-            elif term_metadata["@MajorTopicYN"] == "N":
-                meshMinorIds.append(term_metadata["@UI"])
-                meshMinorTerms.append(term_metadata["#text"])
+    mesh_headings = med_citation["MeshHeadingList"]["MeshHeading"]
 
-            mesh_data = {
-                "meshMajorIds": meshMajorIds,
-                "meshMajorTerms": meshMajorTerms,
-                "meshMinorIds": meshMinorIds,
-                "meshMinorTerms": meshMinorTerms
-            }
-            return mesh_data
 
-        for description in mesh_headings_metadata:
+    mesh_major_ids, mesh_major_terms = [], []
+    mesh_minor_ids, mesh_minor_terms = [], []
+    headings_list = [mesh_headings] if isinstance(mesh_headings, dict) else mesh_headings
 
-            term_metadata = description["DescriptorName"]
-            if term_metadata["@MajorTopicYN"]=="Y":
-                meshMajorIds.append(term_metadata["@UI"])
-                meshMajorTerms.append(term_metadata["#text"])
-            elif term_metadata["@MajorTopicYN"]=="N":
-                meshMinorIds.append(term_metadata["@UI"])
-                meshMinorTerms.append(term_metadata["#text"])
 
-        mesh_data ={
-            "meshMajorIds": meshMajorIds,
-            "meshMajorTerms": meshMajorTerms,
-            "meshMinorIds": meshMinorIds,
-            "meshMinorTerms":meshMinorTerms
-        }
-    else:
-        mesh_data = {
-            "meshMajorIds": None,
-            "meshMajorTerms": None,
-            "meshMinorIds": None,
-            "meshMinorTerms": None
-        }
+    for heading in headings_list:
+        term_data = heading["DescriptorName"]
+        is_major = term_data["@MajorTopicYN"] == "Y"
 
-    return mesh_data
+        if is_major:
+            mesh_major_ids.append(term_data["@UI"])
+            mesh_major_terms.append(term_data["#text"])
+        else:
+            mesh_minor_ids.append(term_data["@UI"])
+            mesh_minor_terms.append(term_data["#text"])
+
+    return {
+        "meshMajorIds": mesh_major_ids,
+        "meshMajorTerms": mesh_major_terms,
+        "meshMinorIds": mesh_minor_ids,
+        "meshMinorTerms": mesh_minor_terms
+    }
 
 def get_dates(metadata:dict)-> dict :
     if metadata["PubmedArticleSet"] is None:
