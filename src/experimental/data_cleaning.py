@@ -19,6 +19,7 @@ def start_spark_application(app_name: str) -> SparkSession:
     logging.info(f"Spark application {app_name} is now running !")
 
     return spark
+
 def clean_data(path: str, spark: SparkSession, today: str) -> SparkDataFrame:
     logging.info("Starting cleaning process...")
     data = spark.read.parquet(path)
