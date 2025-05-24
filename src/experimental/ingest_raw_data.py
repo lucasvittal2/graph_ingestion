@@ -150,17 +150,17 @@ def save_data_parquet_spark(data: List[dict], path_to_save: str) -> None:
     ])
 
     df = spark.createDataFrame(data, schema=schema)
-    df.write.mode("overwrite").parquet(f"{path_to_save}/pubmed_ingested_data.parquet")
+    df.write.mode("overwrite").parquet(f"{path_to_save}/pubmed_ingested_metadata.parquet")
 
     print('\n\n')
     logging.info("Finished spark application.")
-    logging.info(f"Saved data saved as parquet at '{path_to_save}/pubmed_ingested_data.parquet' successfully !")
+    logging.info(f"Saved data saved as parquet at '{path_to_save}/pubmed_ingested_metadata.parquet' successfully !")
 
 
 
 if __name__ == "__main__":
     #set parameters
-    RAW_DATA_PATH = "data/raw/23-05-2025/"
+    RAW_DATA_PATH = "data/raw/metadata/23-05-2025/"
     BRONZE_PATH = "data/bronze/23-05-2025/"
 
     #execution

@@ -17,14 +17,8 @@ def sample_ids(sample_size: int)-> None:
     sample = random.choices(pubmed_ids, k=sample_size)
     save_text("|".join(sample), "/home/acer/projects/graph_ingestion/data/pubmed_ids_sample.txt")
 
-def get_data_partitions(data: List[str], partition_size: int) -> List[List[str]]:
-    data_size = len(data)
-    partitions =  [data[i:i + partition_size] for i in range(0, data_size, partition_size)]
-    num_partitions = len(partitions)
-    logging.info(f"Partitioned data into {num_partitions} partitions.")
-    return partitions
 
-def fetch_single_id(id, raw_data, lock):
+def fetch_single_id(id, raw_metadata, lock):
     try:
         url = f"https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi"
         params = {
@@ -43,28 +37,14 @@ def fetch_single_id(id, raw_data, lock):
         body_response = xmltodict.parse(response.content)
 
         with lock:
-            raw_data[id] = body_response
+            raw_metadata[id] = body_response
         return True
 
     except Exception as e:
         logging.error(f"Failed to get raw data for ID {id}: {e}")
         return False
 
-def create_save_folder_if_not_exists(path_to_save: str) -> None:
-    if not os.path.exists(path_to_save):
-        os.makedirs(path_to_save)
-        logging.info(f"Created Save folder '{path_to_save}'.")
-
-def get_checkpoint_if_exists(checkpoint_file_path: str, partitions: List[List[str]]) -> List[List[str]]:
-
-    if os.path.isfile(checkpoint_file_path):
-        partition_checkpoint = read_json(checkpoint_file_path)["partition_index"]
-        checkpoint_partitions = partitions[partition_checkpoint:]
-    else:
-        checkpoint_partitions = partitions
-
-    return checkpoint_partitions
-def get_raw_data_threaded(ids: List[str], max_workers:int, num_partitions: int, raw_folder:str) -> None:
+def get_raw_metadata_threaded(ids: List[str], max_workers:int, num_partitions: int, raw_folder:str) -> None:
 
     total_ids = len(ids)
     today = date.today()
@@ -74,7 +54,7 @@ def get_raw_data_threaded(ids: List[str], max_workers:int, num_partitions: int, 
     path_to_save = f"{raw_folder}/{formatted_date}"
 
     create_save_folder_if_not_exists(path_to_save)
-    partitions = get_data_partitions(pubmed_ids, num_partitions)
+    partitions = get_data_partitions(ids, num_partitions)
     checkpoint_file_path = f"{path_to_save}/checkpoint.json"
     partitions = get_checkpoint_if_exists(checkpoint_file_path, partitions)
     logging.info(f"Total records to process: {total_ids}")
@@ -83,14 +63,14 @@ def get_raw_data_threaded(ids: List[str], max_workers:int, num_partitions: int, 
 
     for i, partition in enumerate(partitions):
 
-        raw_data = {}
+        raw_metadata = {}
         raw_data_path = f"{path_to_save}/pubmed_articles_metadata_partition{i + 1}.json"
 
         try:
             # Use a ThreadPoolExecutor to manage the thread pool
             with ThreadPoolExecutor(max_workers=max_workers) as executor:
                 # Submit tasks for each ID
-                futures = [executor.submit(fetch_single_id, id, raw_data, lock) for id in partition]
+                futures = [executor.submit(fetch_single_id, id, raw_metadata, lock) for id in partition]
 
                 # Wait for all futures to complete
                 for future in futures:
@@ -100,13 +80,13 @@ def get_raw_data_threaded(ids: List[str], max_workers:int, num_partitions: int, 
 
             logging.info(
                 f"Extraction of raw data completed. Successfully fetched {successful_fetches}/{total_ids} records.")
-            save_json(raw_data, raw_data_path)
+            save_json(raw_metadata, raw_data_path)
 
         except Exception as e:
             logging.error(f"Failed in thread execution: \n\n{e}\n\n")
             # Save whatever data was collected before the error
             logging.error(f"Saving current state...")
-            if raw_data:
+            if raw_metadata:
                 save_json({"partition_index": i}, f"{path_to_save}/checkpoint.json")
                 logging.error(f"{path_to_save}/checkpoint.json")
 
@@ -116,9 +96,9 @@ def get_raw_data_threaded(ids: List[str], max_workers:int, num_partitions: int, 
 if __name__=="__main__":
     SAMPLE_SIZE = 100000
     PARTITIONS= 2000
-    RAW_FOLDER = "/home/acer/projects/graph_ingestion/data/raw"
+    RAW_FOLDER = "/home/acer/projects/graph_ingestion/data/raw/metadata"
 
     setup_logs()
     #sample  = sample_ids(SAMPLE_SIZE)
     pubmed_ids = read_text("/home/acer/projects/graph_ingestion/data/pubmed_ids_sample.txt").split("|")
-    get_raw_data_threaded(pubmed_ids, max_workers=1, num_partitions=PARTITIONS, raw_folder=RAW_FOLDER)
+    get_raw_metadata_threaded(pubmed_ids, max_workers=1, num_partitions=PARTITIONS, raw_folder=RAW_FOLDER)
