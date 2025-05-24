@@ -101,14 +101,16 @@ def ingest_data(path: str):
 
     for file in json_files:
         json_content = read_json(file)
+        pmc_ids = list(json_content.keys())
         metadata_db = json_content.values()
-        for metadata in metadata_db:
+        for pmc_id, metadata in zip(pmc_ids, metadata_db):
             title = get_title(metadata)
             pubmed_id = get_pubmed_id(metadata)
             abstract = get_abstract(metadata)
             mesh_data = get_mesh_data(metadata)
             dates_data = get_dates(metadata)
             ingested_data.append({
+                "PMCID": pmc_id,
                 "pubmedId": pubmed_id,
                 "title": title,
                 "abstract": abstract,
@@ -134,6 +136,7 @@ def save_data_parquet_spark(data: List[dict], path_to_save: str) -> None:
         logging.info(f"Created Save folder '{path_to_save}'.")
 
     schema = StructType([
+        StructField("PMCID", StringType(), True),
         StructField("pubmedId", StringType(), True),
         StructField("title", StringType(), True),
         StructField("abstract", StringType(), True),
