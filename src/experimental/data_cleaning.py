@@ -5,6 +5,7 @@ from tools import setup_logs
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import  lit, col, size
 from pyspark.sql.dataframe import  DataFrame as SparkDataFrame
+import shutil
 
 def start_spark_application(app_name: str) -> SparkSession:
     logging.info(f"Starting Spark application {app_name}...\n\n")
@@ -41,7 +42,7 @@ def clean_data(path: str, spark: SparkSession, today: str) -> SparkDataFrame:
     logging.info(f"Cleaned rows with 'meshMinorTerms' column with no mesh terms, remained {cleaned_data.count()} rows.")
     cleaned_data = cleaned_data.withColumn("cleanedDate", lit(today))
 
-
+    cleaned_data.show(5)
     logging.info("Data was cleaned successfully !")
     logging.info(f"Total row after cleaning process: {cleaned_data.count()} rows")
 
@@ -51,6 +52,9 @@ def save_data(path_to_save:str, spark_df: SparkDataFrame) -> None:
     if not os.path.exists(path_to_save):
         os.makedirs(path_to_save)
         logging.info(f"Created Save folder '{path_to_save}'.")
+
+    if os.path.exists(f"{path_to_save}/pubmed_cleaned_data.parquet"):
+        shutil.rmtree(f"{path_to_save}/pubmed_cleaned_data.parquet")
 
     cleaned_data_path = f"{path_to_save}/pubmed_cleaned_data.parquet"
     logging.info("Saving cleaned data...")
