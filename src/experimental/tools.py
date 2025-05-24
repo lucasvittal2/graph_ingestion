@@ -1,5 +1,7 @@
-import logging
+import os
 import json
+import logging
+from typing import List
 
 
 def save_text(data: str, path: str) -> None:
@@ -49,3 +51,25 @@ def setup_logs() -> None:
         f"[INGESTION-PUBMED-DATA] - [%(asctime)s] - [%(levelname)s] - %(message)s"
     )
     logging.basicConfig(format=format, level=logging.INFO)
+
+def get_data_partitions(data: List[str], partition_size: int) -> List[List[str]]:
+    data_size = len(data)
+    partitions =  [data[i:i + partition_size] for i in range(0, data_size, partition_size)]
+    num_partitions = len(partitions)
+    logging.info(f"Partitioned data into {num_partitions} partitions.")
+    return partitions
+
+def create_save_folder_if_not_exists(path_to_save: str) -> None:
+    if not os.path.exists(path_to_save):
+        os.makedirs(path_to_save)
+        logging.info(f"Created Save folder '{path_to_save}'.")
+
+def get_checkpoint_if_exists(checkpoint_file_path: str, partitions: List[List[str]]) -> List[List[str]]:
+
+    if os.path.isfile(checkpoint_file_path):
+        partition_checkpoint = read_json(checkpoint_file_path)["partition_index"]
+        checkpoint_partitions = partitions[partition_checkpoint:]
+    else:
+        checkpoint_partitions = partitions
+
+    return checkpoint_partitions
