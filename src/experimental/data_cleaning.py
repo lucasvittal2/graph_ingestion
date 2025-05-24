@@ -58,7 +58,7 @@ def save_data(path_to_save:str, spark_df: SparkDataFrame) -> None:
     logging.info(f"Cleaned data saved at {cleaned_data_path}")
 
 if __name__=="__main__":
-    BRONZE_DATA_PATH =  "data/bronze/22-05-2025/pubmed_ingested_data.parquet"
+    BRONZE_DATA_PATH =  "data/bronze/23-05-2025/pubmed_ingested_data.parquet"
 
     today = date.today().strftime("%d-%m-%Y")
     silver_data_path = f"data/silver/{today}/"
