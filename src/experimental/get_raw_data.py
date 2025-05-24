@@ -114,11 +114,11 @@ def get_raw_data_threaded(ids: List[str], max_workers:int, num_partitions: int, 
 
 
 if __name__=="__main__":
-    SAMPLE_SIZE = 5000
-    PARTITIONS= 100
+    SAMPLE_SIZE = 100000
+    PARTITIONS= 2000
     RAW_FOLDER = "/home/acer/projects/graph_ingestion/data/raw"
 
     setup_logs()
-    sample  = sample_ids(SAMPLE_SIZE)
+    #sample  = sample_ids(SAMPLE_SIZE)
     pubmed_ids = read_text("/home/acer/projects/graph_ingestion/data/pubmed_ids_sample.txt").split("|")
     get_raw_data_threaded(pubmed_ids, max_workers=1, num_partitions=PARTITIONS, raw_folder=RAW_FOLDER)

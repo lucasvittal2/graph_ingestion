@@ -156,10 +156,9 @@ def save_data_parquet_spark(data: List[dict], path_to_save: str) -> None:
 
 
 if __name__ == "__main__":
-
     #set parameters
-    RAW_DATA_PATH = "data/raw/22-05-2025/"
-    BRONZE_PATH = "data/bronze/22-05-2025/"
+    RAW_DATA_PATH = "data/raw/23-05-2025/"
+    BRONZE_PATH = "data/bronze/23-05-2025/"
 
     #execution
     setup_logs()
