@@ -125,7 +125,7 @@ def save_data_parquet_spark(data: List[dict], path_to_save: str) -> None:
 
     logging.info("Starting the Spark application process of saving ingested data as parquet...\n\n")
     spark = SparkSession.builder \
-        .appName("Pubmed Data ingestion") \
+        .appName("Pubmed Metadata ingestion") \
         .master("local[*]") \
         .config("spark.executor.memory", "2g") \
         .config("spark.driver.memory", "3g") \
