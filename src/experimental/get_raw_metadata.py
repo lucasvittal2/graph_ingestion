@@ -54,7 +54,7 @@ def get_raw_metadata_threaded(ids: List[str], max_workers:int, num_partitions: i
     path_to_save = f"{raw_folder}/{formatted_date}"
 
     create_save_folder_if_not_exists(path_to_save)
-    partitions = get_data_partitions(ids, num_partitions)
+    partitions = get_data_partitions(pubmed_ids, num_partitions)
     checkpoint_file_path = f"{path_to_save}/checkpoint.json"
     partitions = get_checkpoint_if_exists(checkpoint_file_path, partitions)
     logging.info(f"Total records to process: {total_ids}")
