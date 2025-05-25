@@ -1,4 +1,5 @@
 import os
+import re
 import json
 import logging
 from typing import List
@@ -73,3 +74,7 @@ def get_checkpoint_if_exists(checkpoint_file_path: str, partitions: List[List[st
         checkpoint_partitions = partitions
 
     return checkpoint_partitions
+
+def sort_partitions(paths: List[str]) -> List[str]:
+    sorted_list = sorted(paths, key=lambda x: int(re.search(r'partition(\d+)', x).group(1)))
+    return sorted_list
