@@ -1,5 +1,7 @@
 import os
 import logging
+from datetime import  date
+from tools import sort_partitions
 from typing import Dict, List
 from pyspark.sql import SparkSession
 from pyspark.sql.types import StructType, StructField, StringType
@@ -47,7 +49,8 @@ def get_urls_metadata_from_file(metadata: Dict[str, dict]) -> dict:
 
 def get_all_url_metadata(url_raw_path: str) -> List[dict]:
     url_metadata = []
-    files = [f"{url_raw_path}/{file}" for file in os.listdir(url_raw_path)]
+    sorted_dirs = sort_partitions(os.listdir(url_raw_path))
+    files = [f"{url_raw_path}/{file}" for file in sorted_dirs]
     logging.info(f"Starting extraction url metadata...")
     for file in files:
 
@@ -89,9 +92,13 @@ def save_data_parquet_spark(data: List[dict], path_to_save: str) -> None:
     logging.info(f"Saved data saved as parquet at '{path_to_save}/pubmed_ingested_url_metadata.parquet' successfully !")
 
 if __name__=="__main__":
+    TODAY = date.today().strftime("%d-%m-%Y")
     RAW_DATA_PATH = "data/raw/metadata/url"
-    BRONZE_PATH = "data/bronze/23-05-2025/"
+
+    source_dir = sorted(os.listdir(RAW_DATA_PATH))[-1]
+    source_data_path = f"{RAW_DATA_PATH}/{source_dir}"
+    bronze_path = f"data/bronze/{TODAY}/"
 
     setup_logs()
-    url_metadata = get_all_url_metadata(RAW_DATA_PATH)
-    save_data_parquet_spark(url_metadata, BRONZE_PATH)
+    url_metadata = get_all_url_metadata(source_data_path)
+    save_data_parquet_spark(url_metadata, bronze_path)
