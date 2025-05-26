@@ -1,11 +1,11 @@
 import os
 import logging
 from typing import List
-from datetime import date
+from tools import sort_partitions
 from pyspark.sql import SparkSession
 from tools import read_json, setup_logs
 from pyspark.sql.types import StructType, StructField, StringType, ArrayType
-
+from datetime import date
 
 def get_title(metadata: dict) -> str | None:
 
@@ -95,7 +95,8 @@ def get_dates(metadata:dict)-> dict :
     return dates_data
 
 def ingest_data(path: str):
-    json_files = [f"{path}/{file}" for file in os.listdir(path)]
+    sorted_dirs = sort_partitions(os.listdir(path))
+    json_files = ([f"{path}/{file}" for file in sorted_dirs])
     ingested_date = date.today().strftime("%d-%m-%Y")
     ingested_data = []
 
@@ -118,6 +119,7 @@ def ingest_data(path: str):
                 **dates_data,
                 "ingestionDate": ingested_date
             })
+        logging.info(f"Ingested data from '{file}'.")
 
     return ingested_data
 
@@ -125,7 +127,7 @@ def save_data_parquet_spark(data: List[dict], path_to_save: str) -> None:
 
     logging.info("Starting the Spark application process of saving ingested data as parquet...\n\n")
     spark = SparkSession.builder \
-        .appName("Pubmed Data ingestion") \
+        .appName("Pubmed Metadata ingestion") \
         .master("local[*]") \
         .config("spark.executor.memory", "2g") \
         .config("spark.driver.memory", "3g") \
@@ -150,21 +152,27 @@ def save_data_parquet_spark(data: List[dict], path_to_save: str) -> None:
     ])
 
     df = spark.createDataFrame(data, schema=schema)
-    df.write.mode("overwrite").parquet(f"{path_to_save}/pubmed_ingested_data.parquet")
+    df.write.mode("overwrite").parquet(f"{path_to_save}/pubmed_ingested_metadata.parquet")
 
     print('\n\n')
     logging.info("Finished spark application.")
-    logging.info(f"Saved data saved as parquet at '{path_to_save}/pubmed_ingested_data.parquet' successfully !")
+    logging.info(f"Saved data saved as parquet at '{path_to_save}/pubmed_ingested_metadata.parquet' successfully !")
 
 
 
 if __name__ == "__main__":
     #set parameters
-    RAW_DATA_PATH = "data/raw/23-05-2025/"
-    BRONZE_PATH = "data/bronze/23-05-2025/"
+
+    TODAY = date.today().strftime("%d-%m-%Y")
+    RAW_DATA_PATH = "data/raw/metadata/general/"
+    source_dir= sorted(os.listdir(RAW_DATA_PATH))[-1]
+    source_data_path = f"{RAW_DATA_PATH}/{source_dir}"
+
+
+    bronze_path = f"data/bronze/{TODAY}"
 
     #execution
     setup_logs()
-    ingested_data = ingest_data(RAW_DATA_PATH)
-    save_data_parquet_spark(ingested_data, BRONZE_PATH)
+    ingested_data = ingest_data(source_data_path)
+    save_data_parquet_spark(ingested_data, bronze_path)
     logging.info("Data Ingestion Completed Successfully !")

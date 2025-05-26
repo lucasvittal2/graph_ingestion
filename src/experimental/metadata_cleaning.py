@@ -24,6 +24,7 @@ def start_spark_application(app_name: str) -> SparkSession:
 def clean_data(path: str, spark: SparkSession, today: str) -> SparkDataFrame:
     logging.info("Starting cleaning process...")
     data = spark.read.parquet(path)
+    logging.info(f"Collected data from '{path}'.")
 
     cleaned_data = data.filter(data.abstract.isNotNull())
     logging.info(f"Cleaned rows with 'Abstract' column with null values, remained {cleaned_data.count()} rows.")
@@ -53,22 +54,24 @@ def save_data(path_to_save:str, spark_df: SparkDataFrame) -> None:
         os.makedirs(path_to_save)
         logging.info(f"Created Save folder '{path_to_save}'.")
 
-    if os.path.exists(f"{path_to_save}/pubmed_cleaned_data.parquet"):
-        shutil.rmtree(f"{path_to_save}/pubmed_cleaned_data.parquet")
+    if os.path.exists(f"{path_to_save}/pubmed_cleaned_metadata.parquet"):
+        shutil.rmtree(f"{path_to_save}/pubmed_cleaned_metadata.parquet")
 
-    cleaned_data_path = f"{path_to_save}/pubmed_cleaned_data.parquet"
+    cleaned_data_path = f"{path_to_save}/pubmed_cleaned_metadata.parquet"
     logging.info("Saving cleaned data...")
     spark_df.write.parquet(cleaned_data_path)
     logging.info(f"Cleaned data saved at {cleaned_data_path}")
 
 if __name__=="__main__":
-    BRONZE_DATA_PATH =  "data/bronze/23-05-2025/pubmed_ingested_data.parquet"
+
 
     today = date.today().strftime("%d-%m-%Y")
+    last_broze_dir = sorted(os.listdir("data/bronze/"))[-1]
+    bronze_data_path = f"data/bronze/{last_broze_dir}/pubmed_ingested_metadata.parquet"
     silver_data_path = f"data/silver/{today}/"
 
     #Cleaning process
     setup_logs()
     spark_app = start_spark_application("Cleaning Pubmed Data")
-    cleaned_data = clean_data(BRONZE_DATA_PATH,  spark_app, today)
+    cleaned_data = clean_data(bronze_data_path,  spark_app, today)
     save_data(silver_data_path, cleaned_data)
