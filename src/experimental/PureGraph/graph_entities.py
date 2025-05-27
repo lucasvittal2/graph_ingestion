@@ -1,11 +1,10 @@
-from langchain_community.graphs.graph_document import (
+from langchain_neo4j.graphs.graph_document import (
     Node as BaseNode,
-    Relationship as BaseRelationship,
-    GraphDocument,
+    Relationship as BaseRelationship
 )
 from langchain.schema import Document
-from typing import List, Dict, Any, Optional
-from langchain_core.pydantic_v1 import BaseModel, Field
+from typing import List, Optional
+from pydantic import BaseModel, Field
 
 class Property(BaseModel):
   """A single property consisting of key and value"""
