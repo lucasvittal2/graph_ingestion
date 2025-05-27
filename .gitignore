@@ -3,3 +3,4 @@
 data/
 *test.py
 .env
+/src/experimental/PureGraph/teste.py
