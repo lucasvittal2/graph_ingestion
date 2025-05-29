@@ -30,7 +30,7 @@ def get_available_pdf_metadata(url_metadata_path: str, article_metadata_path: st
         .select([
                 "url.PMCID","pubmedId", "title","abstract","meshMajorIds",
                 "meshMajorTerms","meshMinorIds","meshMinorTerms","revisedDate",
-                "completedDate","fileFormat","updateDate","fileUrl"
+                "completedDate","updateDate","fileUrl"
         ])\
         .dropDuplicates(["PMCID"])
 
