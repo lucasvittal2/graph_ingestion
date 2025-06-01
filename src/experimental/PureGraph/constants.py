@@ -24,5 +24,5 @@ Remember, the knowledge graph should be coherent and easily understandable, so m
 Adhere to the rules strictly. Non-compliance will result in termination."""
 
 NEO4J_URL="neo4j://localhost:7687"
-
+NEO4J_DB_NAME="test_db"
 OPENAI_MODEL_NAME ="gpt-4o-mini"

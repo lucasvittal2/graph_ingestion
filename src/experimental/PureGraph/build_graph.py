@@ -8,11 +8,12 @@ from langchain_core.prompts import ChatPromptTemplate
 from graph_entities import KnowledgeGraph
 from constants import *
 from typing import Optional, List, Any
-from langchain.schema import Document
-from utils import map_to_base_node, map_to_base_relationship
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type, before_log, after_log
+
+from utils import *
 from dotenv import load_dotenv
 import openai
-import os
+import logging
 
 class Neo4jChainGraphDB:
 
@@ -26,7 +27,7 @@ class Neo4jChainGraphDB:
         self._graph  = Neo4jGraph(
         url=db_url,
         username=NEO4J_USER,
-        password=NEO4J_PASSWORD,
+        password=NEO4J_PASSWORD
         )
 
         self._openai_model = ChatOpenAI(model=OPENAI_MODEL_NAME, temperature=0)
@@ -48,8 +49,9 @@ class Neo4jChainGraphDB:
                 ("human", "Use the given format to extract information from the following input: {input}"),
                 ("human", "Tip: Make sure to answer in the correct format"),
             ])
-
-        return create_structured_output_chain(KnowledgeGraph, self._openai_model, prompt_template, verbose=False)
+        structured_output = create_structured_output_chain(KnowledgeGraph, self._openai_model, prompt_template, verbose=False)
+        logging.info(f"Got the following strutured output to be stored on graph: \n\n{structured_output}\n\n")
+        return structured_output
 
     def __extract_and_store_graph(
         self,
@@ -61,7 +63,8 @@ class Neo4jChainGraphDB:
 
 
         extract_chain = self.__get_extraction_chain(nodes, rels)
-        data = extract_chain.invoke({"input": document.page_content})['function']
+        data = extract_chain.invoke({"input": str(document.page_content)})['function']
+        logging.info(f"data extracted from doc: \n\n{data}\n\n")
 
 
         graph_document = GraphDocument(
@@ -71,11 +74,21 @@ class Neo4jChainGraphDB:
         )
         self._graph.add_graph_documents([graph_document],True)
 
+    @retry(
+        stop=stop_after_attempt(5),
+        wait=wait_exponential(multiplier=1, min=4, max=10),
+        retry=retry_if_exception_type( Exception),
+        before=before_log(logging.getLogger(), log_level=logging.WARNING),
+        reraise=True
+    )
     def build_graph(self, documents: List[Document]):
         for i, d in tqdm(enumerate(documents), total=len(documents)):
-            #print(f"Processing chunk {i}: {d}")
-            self.__extract_and_store_graph(d)
-            print("Graph stored successfully.")
+            try:
+                self.__extract_and_store_graph(d)
+                logging.info("New knowledge stored successfully on knowledge graph.")
+            except Exception as err:
+                print(d)
+                raise  err
 
     def query_knowlodge_base(self, query: str ) -> str:
         self._graph.refresh_schema()
@@ -90,22 +103,47 @@ class Neo4jChainGraphDB:
         )
         answer = cypher_chain.invoke({"query": query})
         return answer
+
 if __name__ == "__main__":
-    from langchain_community.document_loaders import WebBaseLoader
+
+    from langchain_community.document_loaders import PyPDFLoader
     from langchain_text_splitters import TokenTextSplitter
     from constants import NEO4J_URL
     from tqdm import tqdm
+    import os
 
-    #setup
-    load_dotenv(".env")
+    PMC_IDS = [
+        "PMC4012372",
+        "PMC4014813",
+        "PMC4014814",
+        "PMC4017398",
+        "PMC4025424",
+        "PMC4028520",
+        "PMC4050920",
+        "PMC4073339"
+    ]
+    PDF_PATH = "data/raw/data/pdf"
+    pdf_paths = [f"{PDF_PATH}/{file}" for file in os.listdir(PDF_PATH) if file.split('.')[-2] in PMC_IDS]
+    print(pdf_paths)
     graph_db = Neo4jChainGraphDB(db_url=NEO4J_URL)
 
+    load_dotenv(".env")
+    setup_logs()
 
-    #build knowldge base
-    raw_documents = WebBaseLoader("https://blog.langchain.dev/what-is-an-agent/").load()
-    text_splitter = TokenTextSplitter(chunk_size=2048, chunk_overlap=24)
-    documents = text_splitter.split_documents(raw_documents)
-    graph_db.build_graph(documents)
 
-    answer = graph_db.query_knowlodge_base("What is Ai Agent ?")
-    print(answer)
+    logging.info("starting process of building graph knowledge base...\n\n")
+    resp = graph_db.query_knowlodge_base("what is the relationship between hormony therapy for women and menopause postergate ?")
+    # try:
+    #     for pdf_path in pdf_paths:
+    #
+    #         raw_documents = PyPDFLoader(pdf_path).load()
+    #         sanitized_documents = sanitize_documents(raw_documents)
+    #         text_splitter = TokenTextSplitter(chunk_size=256, chunk_overlap=24)
+    #         documents = text_splitter.split_documents(sanitized_documents)
+    #         graph_db.build_graph(documents)
+    #         logging.info(f"add content from '{pdf_path} to knowledge graph successfully.")
+    #
+    #     logging.info(f"Graph knowledge base built on '{NEO4J_DB_NAME}' database")
+    #
+    # except Exception as err:
+    #     logging.error(f"Graph knowledge base has failed: \n\n{err}\n\n")
