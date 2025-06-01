@@ -30,8 +30,8 @@ def clean_data(path: str, spark: SparkSession, silver_last_dir: str) -> SparkDat
 
     cleaned_data = url_metadata.alias("url") \
         .join(general_metadata.alias("gm"), col("url.PMCID") == col("gm.PMCID"), "left_semi") \
-        .select(["url.fileFormat", "url.updateDate", "url.fileUrl"])
-                    #.select(["fileFormat","updateDate","fileUrl"])
+        .select(["url.PMCID","url.fileFormat", "url.updateDate", "url.fileUrl"])
+
     logging.info(f"Cleaned rows whose 'PMCID' column values is not identified in general cleaned metadata database, remained {cleaned_data.count()} rows.")
     cleaned_data = cleaned_data.filter(col("fileFormat") == lit("pdf"))
     logging.info(f"Cleaned rows with 'fileFormat' column with 'pdf' values, remained {cleaned_data.count()} rows.")
