@@ -3,11 +3,9 @@ import os
 from logging import Logger
 from typing import List
 
-
 from langchain_postgres import PGVector
 from langchain_core.embeddings import Embeddings
 from langchain_core.documents import Document
-from openai import embeddings
 
 connection = "postgresql+psycopg://langchain:langchain@localhost:6024/langchain"  # Uses psycopg3!
 collection_name = "my_docs"
