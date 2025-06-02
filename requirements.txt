@@ -17,3 +17,4 @@ langchain-neo4j==0.4.0
 langchain-postgres==0.0.14
 google-cloud-logging==3.12.1
 psycopg2==2.9.10
+rdflib==7.1.4
