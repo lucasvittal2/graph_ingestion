@@ -1,16 +1,29 @@
 import re
 import random
 import pandas as pd
+from pyspark.sql import SparkSession
 from datetime import datetime, timedelta
 from urllib.parse import quote
 from rdflib import URIRef
-
+from logging import Logger
 
 def parse_mesh_terms(mesh_list):
     if mesh_list is None:
         return []
     return [term.strip() for term in mesh_list]
 
+def create_valid_uri(base_uri, text):
+    if pd.isna(text):
+        return None
+    sanitized_text = quote(
+        text.strip()
+        .replace(' ', '_')
+        .replace('"', '')
+        .replace('<', '')
+        .replace('>', '')
+        .replace("'", "_")
+    )
+    return f"{base_uri}/{sanitized_text}"
 
 def convert_to_uri(term, base_namespace="http://example.org/mesh/"):
     """
@@ -78,3 +91,17 @@ def create_article_uri(title, base_namespace="http://example.org/article"):
     sanitized_text = quote(
         title.strip().replace(' ', '_').replace('"', '').replace('<', '').replace('>', '').replace("'", "_"))
     return URIRef(f"{base_namespace}/{sanitized_text}")
+
+def start_spark_application(app_name: str, logger: Logger) -> SparkSession:
+    logger.info(f"Starting Spark application {app_name}...\n\n")
+    spark = SparkSession.builder \
+        .appName(app_name) \
+        .master("local[*]") \
+        .config("spark.executor.memory", "2g") \
+        .config("spark.driver.memory", "3g") \
+        .getOrCreate()
+
+    print("\n\n")
+    logger.info(f"Spark application {app_name} is now running !")
+    return spark
+

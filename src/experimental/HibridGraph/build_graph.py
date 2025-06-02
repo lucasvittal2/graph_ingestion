@@ -5,27 +5,9 @@ from logging import Logger
 from urllib.parse import quote
 from typing import Tuple, List
 from rdflib.namespace import SKOS, XSD
-from pyspark.sql import SparkSession
 from pandas import DataFrame as PandasDataframe
 from rdflib import Graph, RDF, RDFS, Namespace, URIRef, Literal
 from model import KnowledgeGraphEntities
-
-
-
-def start_spark_application(app_name: str, logger: Logger) -> SparkSession:
-    logger.info(f"Starting Spark application {app_name}...\n\n")
-    spark = SparkSession.builder \
-        .appName(app_name) \
-        .master("local[*]") \
-        .config("spark.executor.memory", "2g") \
-        .config("spark.driver.memory", "3g") \
-        .getOrCreate()
-
-    print("\n\n")
-    logger.info(f"Spark application {app_name} is now running !")
-
-    return spark
-
 
 def get_metadata(metadata_path: str, logger: Logger) -> PandasDataframe:
     logger.info(f"Reading metadata from '{metadata_path}'...")
