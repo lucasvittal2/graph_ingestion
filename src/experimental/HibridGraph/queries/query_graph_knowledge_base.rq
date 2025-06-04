@@ -1,0 +1,15 @@
+PREFIX schema: <http://schema.org/>
+PREFIX ex: <http://example.org/>
+
+SELECT ?article ?title ?abstract ?datePublished ?access ?meshTerm
+WHERE {{
+  ?article a ex:Article ;
+           schema:name ?title ;
+           schema:description ?abstract ;
+           schema:datePublished ?datePublished ;
+           ex:access ?access ;
+           schema:about ?meshTerm .
+
+  ?meshTerm a ex:MeSHTerm .
+  FILTER (?article IN ({article_uris}))
+}}
