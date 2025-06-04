@@ -47,10 +47,6 @@ def create_article_uri(title, base_namespace="http://example.org/article/"):
     uri = f"{base_namespace}{encoded_title}"
     return URIRef(uri)
 
-    # Add a new column to the DataFrame for the article URIs
-    df['article_uri'] = df['title'].apply(lambda title: create_valid_uri("http://example.org/article", title))
-    return df
-
 def setup_knowledge_graph(graph, schema: Namespace, ex:Namespace) -> Tuple[KnowledgeGraphEntities, Graph]:
 
 
