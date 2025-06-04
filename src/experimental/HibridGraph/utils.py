@@ -123,3 +123,12 @@ def sanitize_term(term):
     term = term.replace("_", " ")  # Replace underscores with spaces
     return term.strip()
 
+def read_text(path: str, logger: Logger) -> str | None:
+    try:
+        with open(path, 'r') as file:
+            content = file.read()
+            logger.info(f"Read file {path}")
+            return content
+    except Exception as e:
+        logger.error(f"Failed to read file path {path}: \n\n{e}\n\n")
+        return None
