@@ -105,3 +105,16 @@ def start_spark_application(app_name: str, logger: Logger) -> SparkSession:
     logger.info(f"Spark application {app_name} is now running !")
     return spark
 
+def sanitize_term(term):
+    """
+    Clean and format the term:
+    - Remove leading/trailing quotes (single or double)
+    - Replace underscores with spaces
+    - Ensure no unwanted characters remain
+    """
+    if not term:
+        return term
+    term = term.strip("'\"")  # Remove single or double quotes
+    term = term.replace("_", " ")  # Replace underscores with spaces
+    return term.strip()
+
