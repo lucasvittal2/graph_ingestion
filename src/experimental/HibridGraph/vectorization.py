@@ -33,10 +33,12 @@ class Vectorizer:
         total_row = len(df)
         self._logger.info("Extracting articles title, article_uri and meshMajorTerms fields into langchain document....")
         try:
+
             for index, row in df.iterrows():
                 metadata= {
                     "title": row["title"],
-                    "article_URI": row["fileUrl"],
+                    "article_URI": create_article_uri(row["title"]),
+                    "file_url": row["fileUrl"],
                     "mesh_major_terms": row["meshMajorTerms"]
                 }
                 doc = Document(page_content=row["abstract"], metadata=metadata)
@@ -102,6 +104,7 @@ if __name__ == "__main__":
     #do vectorization process
     spark = start_spark_application("Vectorizing metadata", logger)
     metadata_df = spark.read.parquet(metadata_path).toPandas()
+    print(metadata_df.columns)
     mesh_df = extract_mesh_terms(metadata_df)
     vectorizer.vectorize_articles_dataframe(metadata_df)
     vectorizer.vectorize_mesh_terms(mesh_df)
