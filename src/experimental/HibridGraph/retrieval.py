@@ -47,7 +47,7 @@ class VectorKGRetriever:
             list_triples = list(triples)
             self.logger.info(f"Got {len(list_triples)} alternative terms.")
             print("\n")
-            
+
             return list_triples
 
         except Exception as err:
@@ -80,16 +80,16 @@ class VectorKGRetriever:
             for result in results["results"]["bindings"]:
                 subject_label = result.get("narrowerConceptLabel", {}).get("value", "No label")
                 concepts.add(sanitize_term(subject_label))  # Sanitize term before adding
-            
+
             list_concepts = list(concepts)
             self.logger.info(f"Got  {len(list_concepts)} Narrower MeSH terms.")
-            
+
             return list_concepts
 
         except Exception as err:
             self.logger.error(f"Error fetching narrower concepts for term '{term}': {err}")
             raise err
-            
+
 
 
     def __get_all_narrower_concepts(self, term, depth=2, current_depth=1):
@@ -105,7 +105,7 @@ class VectorKGRetriever:
                     all_concepts.extend(child_concepts)
 
         except Exception as e:
-            print(f"Error fetching all narrower concepts for term '{term}': {e}")
+            self.logger.error(f"Error fetching all narrower concepts for term '{term}': {e}")
 
         return all_concepts
 
@@ -129,7 +129,8 @@ class VectorKGRetriever:
                                            schema:about ?meshTerm .
     
                                   ?meshTerm a ex:MeSHTerm .
-    
+                                  FILTER (?article IN ({article_uris}))
+                                  
                                   
                                 }}
                                 """
@@ -176,9 +177,10 @@ class VectorKGRetriever:
             key=lambda item: len(item[1]['meshTerms']),
             reverse=True
         )
+        top_ranked_articles = ranked_articles[:top_k]
         self.logger.info("Ranked result by number of match MeshTerms.")
-        self.logger.info(f"Returned {top_k} ranked results.")
-        return ranked_articles[:top_k]
+        self.logger.info(f"Returned {len(top_ranked_articles)} ranked results.")
+        return top_ranked_articles
 
     def get_contexts(self, query: str, graph_path: str, top_k: int = 10) -> list:
         try:
@@ -212,7 +214,7 @@ if __name__ == "__main__":
     import os
 
     GRAPH_PATH = "data/gold/01-06-2025/PubMedGraph.ttl"
-    USER_QUERY = 'Emergency'
+    USER_QUERY = 'procedures of Radiography'
 
 
     load_dotenv(".env")
@@ -221,6 +223,9 @@ if __name__ == "__main__":
     logger = LoggerHandler(logger_name="TESTING-HIBRID-SOLUTION-RETRIEVAL", logging_type='console').get_logger()
     retriever = VectorKGRetriever(logger=logger, embeddings=openai_embedding)
     contexts = retriever.get_contexts(USER_QUERY, GRAPH_PATH)
+    for c in contexts:
+        print(c)
+        print("\n\n")
 
 
 
