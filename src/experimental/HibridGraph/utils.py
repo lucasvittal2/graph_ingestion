@@ -74,7 +74,7 @@ def generate_random_access():
 
 
 # Function to create a valid URI for Articles
-def create_article_uri(title, base_namespace="http://example.org/article"):
+def create_article_uri(title, base_namespace="http://example.org/article/"):
     """
     Creates a URI for an article by replacing non-word characters with underscores and URL-encoding.
 
@@ -87,10 +87,15 @@ def create_article_uri(title, base_namespace="http://example.org/article"):
     """
     if pd.isna(title):
         return None
-    # Encode text to be used in URI
-    sanitized_text = quote(
-        title.strip().replace(' ', '_').replace('"', '').replace('<', '').replace('>', '').replace("'", "_"))
-    return URIRef(f"{base_namespace}/{sanitized_text}")
+    # Replace non-word characters with underscores
+    sanitized_title = re.sub(r'\W+', '_', title.strip())
+    # Condense multiple underscores into a single underscore
+    sanitized_title = re.sub(r'_+', '_', sanitized_title)
+    # URL-encode the term
+    encoded_title = quote(sanitized_title)
+    # Concatenate with base_namespace without adding underscores
+    uri = f"{base_namespace}{encoded_title}"
+    return URIRef(uri)
 
 def start_spark_application(app_name: str, logger: Logger) -> SparkSession:
     logger.info(f"Starting Spark application {app_name}...\n\n")
